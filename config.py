@@ -126,20 +126,21 @@ def get_dataset_config(dataset_name):
         }
     elif dataset_name == 'ciciot':
         return {
-            'nb_cl_first': 5,
-            'nb_cl': 1,
+            # Partition similar to CICAndMal: first task sizable, then 4 subsequent groups
+            'nb_cl_first': 40,
+            'nb_cl': 11,
             'nb_groups': 4,
             'nb_total': 10000,
             'data_path': '/home/atg205/Malware/CICIot/processed_data/',
-            'in_feats': 73,
+            'in_feats': 74,
             'epochs': 40,
-            # Model architecture for IoT dataset
+            # Model architecture for CICIot
             'hidden': 16,
             'num_layers': 1,
             'nhead': 2,
             'dropout': 0.2,
             'use_cls_token': True,
-            # Exemplar settings for iot dataset
+            # Exemplar settings for CICIot
             'exemplar_floor': 20,
             'exemplar_cap': 30,
             'nb_cluster': 600,

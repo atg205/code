@@ -15,7 +15,7 @@ class CustomDataset(Dataset):
 
 def prepare_files(x_path, y_path, mixing, order, nb_groups, nb_cl, nb_cl_first):
     X_data = np.load(x_path)
-    y_data = np.load(y_path)   
+    y_data = np.load(y_path,allow_pickle=True)   
     
     labels_old = np.array([mixing[label] for label in y_data])
     
