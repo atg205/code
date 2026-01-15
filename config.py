@@ -7,7 +7,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Continual Learning with iCaRL')
     
     # Dataset Selection
-    parser.add_argument('--dataset', type=str, choices=['cic', 'iot','ciciot'], default='ciciot',
+    parser.add_argument('--dataset', type=str, choices=['cic', 'iot','ciciot'], default='cic',
                         help='Dataset to use: cic (CICAndMal2017) or iot (IoT23) (default: cic)')
 
     # GPU and System Settings
