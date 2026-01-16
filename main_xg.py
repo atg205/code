@@ -75,6 +75,7 @@ with open(f"{nb_cl}settings_mlp.pickle", 'wb') as fp:
     pickle.dump(files_train, fp)
 
 print(datetime.datetime.now())
+est = 1000
 ##### ------------- Main Algorithm START -------------#####
 for itera in range(nb_groups + 1):
     iteration_start_time = time.time()
@@ -97,7 +98,7 @@ for itera in range(nb_groups + 1):
             selected_exemplars = tmp_var[0:min(len(tmp_var),nb_protos_cl)]
             idx_iter += selected_exemplars
         idx_iter = np.concatenate((prev_idx_iter, idx_iter))
-
+        prev_idx_iter = idx_iter.copy()
 
 
     print(f'Task {itera + 1}: Training {cur_nb_cl} classes...') 
@@ -105,39 +106,37 @@ for itera in range(nb_groups + 1):
     X_full, y_full = utils_data.read_data(x_path, y_path, mixing, idx_iter)
     X_val, y_val = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
 
-
     X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
     # 4. Create and train the XGBoost model
     dtrain = xgb.DMatrix(X_full, label=y_full)
     dtest = xgb.DMatrix(X_test, label=y_test)
-    for est in [1000]:
-        print("Est------------------")
-        print(est)
-        model = xgb.XGBClassifier(
-            num_class=nb_cl, 
-            eval_metric='mlogloss',
-            use_label_encoder=False,
-            max_depth=4,
-            learning_rate=0.3,
-            n_estimators=est,
-            random_state=42,
-            device='cpu',
-            n_gpus=0
-        )
+    print("Est------------------")
+    print(est)
+    model = xgb.XGBClassifier(
+        num_class=nb_cl, 
+        eval_metric='mlogloss',
+        use_label_encoder=False,
+        max_depth=4,
+        learning_rate=0.3,
+        n_estimators=est,
+        random_state=42,
+        device='cpu',
+        n_gpus=0
+    )
 
-        scores = cross_val_score(model, X_train, y_train, cv=5)
-        print(scores)
-        print(datetime.datetime.now())
-        
-        # Store iteration timing and results
-        iteration_time = time.time() - iteration_start_time
-        iteration_timing_results.append({
-            'iteration': itera,
-            'time_seconds': iteration_time,
-            'cross_val_scores': scores.tolist(),
-            'mean_cv_score': float(scores.mean()),
-            'std_cv_score': float(scores.std())
-        })
+    scores = cross_val_score(model, X_train, y_train, cv=5)
+    print(scores)
+    print(datetime.datetime.now())
+    
+    # Store iteration timing and results
+    iteration_time = time.time() - iteration_start_time
+    iteration_timing_results.append({
+        'iteration': itera,
+        'time_seconds': iteration_time,
+        'cross_val_scores': scores.tolist(),
+        'mean_cv_score': float(scores.mean()),
+        'std_cv_score': float(scores.std())
+    })
 
     continue
     def objective(trial):
