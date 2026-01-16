@@ -6,10 +6,11 @@ import time
 import datetime
 import config
 import utils_data
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 import xgboost as xgb
 import optuna
+from sklearn.metrics import accuracy_score
 # config
 batch_size = config.batch_size
 nb_cl_first = config.nb_cl_first
@@ -112,30 +113,50 @@ for itera in range(nb_groups + 1):
     dtest = xgb.DMatrix(X_test, label=y_test)
     print("Est------------------")
     print(est)
-    model = xgb.XGBClassifier(
-        num_class=nb_cl, 
-        eval_metric='mlogloss',
-        use_label_encoder=False,
-        max_depth=4,
-        learning_rate=0.3,
-        n_estimators=est,
-        random_state=42,
-        device='cpu',
-        n_gpus=0
-    )
-
-    scores = cross_val_score(model, X_train, y_train, cv=5)
-    print(scores)
-    print(datetime.datetime.now())
     
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_scores = []
+
+    for fold, (train_idx, val_idx) in enumerate(skf.split(X_train, y_train), 1):
+        print(f"Fold {fold}")
+
+        X_tr = X_train[train_idx]
+        y_tr = y_train[train_idx]
+        X_va = X_train[val_idx]
+        y_va = y_train[val_idx]
+
+        model = xgb.XGBClassifier(
+            tree_method="hist",
+            device=config.device.type,              # GPU
+            n_estimators=est,
+            max_depth=4,
+            learning_rate=0.3,
+            objective="multi:softprob",
+            num_class=nb_cl,
+            eval_metric="mlogloss",
+            random_state=42,
+            verbosity=1
+        )
+
+        model.fit(
+            X_tr,
+            y_tr,
+            eval_set=[(X_va, y_va)],
+            verbose=False
+        )
+
+        preds = model.predict(X_va)
+        acc = accuracy_score(y_va, preds)
+        cv_scores.append(acc)
+
     # Store iteration timing and results
     iteration_time = time.time() - iteration_start_time
     iteration_timing_results.append({
         'iteration': itera,
         'time_seconds': iteration_time,
-        'cross_val_scores': scores.tolist(),
-        'mean_cv_score': float(scores.mean()),
-        'std_cv_score': float(scores.std())
+        'cross_val_scores': cv_scores,
+        'mean_cv_score': float(np.mean(cv_scores)),
+        'std_cv_score': float(np.std(cv_scores))
     })
 
     continue
