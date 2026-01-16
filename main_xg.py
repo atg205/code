@@ -1,7 +1,7 @@
-import torch
 import numpy as np
 import pickle
 
+import datetime
 import config
 import utils_data
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -9,7 +9,6 @@ from sklearn.model_selection import train_test_split, cross_val_score
 import xgboost as xgb
 import optuna
 # config
-device = config.device
 batch_size = config.batch_size
 nb_cl_first = config.nb_cl_first
 nb_cl = config.nb_cl
@@ -50,7 +49,6 @@ for _ in range(total_classes):
 
 ### Random mixing ###
 print("Mixing the classes and putting them in batches of classes...")
-torch.manual_seed(config.SEED)
 np.random.seed(config.SEED)
 
 
@@ -72,6 +70,7 @@ with open(f"{nb_cl}settings_mlp.pickle", 'wb') as fp:
     pickle.dump(order, fp)
     pickle.dump(files_train, fp)
 
+print(datetime.datetime.now())
 ##### ------------- Main Algorithm START -------------#####
 for itera in range(nb_groups + 1):
     print(f'Batch of classes number {itera+1} arrives ...')
@@ -79,6 +78,8 @@ for itera in range(nb_groups + 1):
     if itera == 0:
         cur_nb_cl = nb_cl_first
         idx_iter = files_train[itera]
+        prev_idx_iter = idx_iter.copy()
+
     else:
         cur_nb_cl = nb_cl
         idx_iter = files_train[itera][:]
@@ -90,32 +91,40 @@ for itera in range(nb_groups + 1):
             tmp_var = files_protoset[i]
             selected_exemplars = tmp_var[0:min(len(tmp_var),nb_protos_cl)]
             idx_iter += selected_exemplars
+        idx_iter = np.concatenate((prev_idx_iter, idx_iter))
+
+
 
     print(f'Task {itera + 1}: Training {cur_nb_cl} classes...') 
 
     X_full, y_full = utils_data.read_data(x_path, y_path, mixing, idx_iter)
     X_val, y_val = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
-    
-    X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
 
+
+    X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
     # 4. Create and train the XGBoost model
     dtrain = xgb.DMatrix(X_full, label=y_full)
     dtest = xgb.DMatrix(X_test, label=y_test)
+    for est in [1000]:
+        print("Est------------------")
+        print(est)
+        model = xgb.XGBClassifier(
+            num_class=nb_cl, 
+            eval_metric='mlogloss',
+            use_label_encoder=False,
+            max_depth=4,
+            learning_rate=0.3,
+            n_estimators=est,
+            random_state=42,
+            device='cpu',
+            n_gpus=0
+        )
 
-    model = xgb.XGBClassifier(
-        num_class=nb_cl, 
-        eval_metric='mlogloss',
-        use_label_encoder=False,
-        max_depth=4,
-        learning_rate=0.3,
-        n_estimators=400,
-        random_state=42
-    )
+        scores = cross_val_score(model, X_train, y_train, cv=5)
+        print(scores)
+        print(datetime.datetime.now())
 
-    scores = cross_val_score(model, X_train, y_train, cv=5)
-    print(scores)
-    break
-
+    continue
     def objective(trial):
         # Suggest hyperparameters
         params = {

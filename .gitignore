@@ -210,6 +210,7 @@ cython_debug/
 !.vscode/*.code-snippets
 !*.code-workspace
 
+config.py
 # Built Visual Studio Code Extensions
 *.vsix
 # Ruff stuff:
