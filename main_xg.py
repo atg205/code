@@ -1,5 +1,7 @@
 import numpy as np
 import pickle
+import json
+import time
 
 import datetime
 import config
@@ -42,6 +44,8 @@ task_accuracy_all = []
 iteration_results = []
 forgetting_scores = []
 task_best_acc_list = []
+### Iteration timing and results ###
+iteration_timing_results = []
 
 total_classes = nb_cl_first + (nb_groups * nb_cl)  # 22 + (4 * 5) = 42
 for _ in range(total_classes):
@@ -73,6 +77,7 @@ with open(f"{nb_cl}settings_mlp.pickle", 'wb') as fp:
 print(datetime.datetime.now())
 ##### ------------- Main Algorithm START -------------#####
 for itera in range(nb_groups + 1):
+    iteration_start_time = time.time()
     print(f'Batch of classes number {itera+1} arrives ...')
     
     if itera == 0:
@@ -123,6 +128,16 @@ for itera in range(nb_groups + 1):
         scores = cross_val_score(model, X_train, y_train, cv=5)
         print(scores)
         print(datetime.datetime.now())
+        
+        # Store iteration timing and results
+        iteration_time = time.time() - iteration_start_time
+        iteration_timing_results.append({
+            'iteration': itera,
+            'time_seconds': iteration_time,
+            'cross_val_scores': scores.tolist(),
+            'mean_cv_score': float(scores.mean()),
+            'std_cv_score': float(scores.std())
+        })
 
     continue
     def objective(trial):
@@ -150,3 +165,12 @@ for itera in range(nb_groups + 1):
     # Print the best hyperparameters and best score
     print(f"Best hyperparameters: {study.best_params}")
     print(f"Best score: {study.best_value:.4f}")
+
+# Write iteration timing and results to JSON file
+if iteration_timing_results:
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    json_filename = f"iteration_results_{timestamp}.json"
+    with open(json_filename, 'w') as f:
+        json.dump(iteration_timing_results, f, indent=2)
+    print(f"\nIteration results saved to {json_filename}")
+
