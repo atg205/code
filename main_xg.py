@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import json
 import time
+import cupy as cp
 
 import datetime
 import config
@@ -76,6 +77,7 @@ with open(f"{nb_cl}settings_mlp.pickle", 'wb') as fp:
     pickle.dump(files_train, fp)
 
 print(datetime.datetime.now())
+print(config.device)
 est = 1000
 ##### ------------- Main Algorithm START -------------#####
 for itera in range(nb_groups + 1):
@@ -108,7 +110,8 @@ for itera in range(nb_groups + 1):
     X_val, y_val = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
 
     X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
-    # 4. Create and train the XGBoost model
+    X_train, X_test, y_train, y_test = cp.asarray(X_train), cp.asarray(X_test), cp.asarray(y_train), cp.asarray(y_test)
+    # 4. Create anhd train the XGBoost model
     dtrain = xgb.DMatrix(X_full, label=y_full)
     dtest = xgb.DMatrix(X_test, label=y_test)
     print("Est------------------")
@@ -117,7 +120,7 @@ for itera in range(nb_groups + 1):
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     cv_scores = []
 
-    for fold, (train_idx, val_idx) in enumerate(skf.split(X_train, y_train), 1):
+    for fold, (train_idx, val_idx) in enumerate(skf.split(X_train.get(), y_train.get()), 1):
         print(f"Fold {fold}")
 
         X_tr = X_train[train_idx]
@@ -142,11 +145,11 @@ for itera in range(nb_groups + 1):
             X_tr,
             y_tr,
             eval_set=[(X_va, y_va)],
-            verbose=False
+            verbose=False,
         )
 
         preds = model.predict(X_va)
-        acc = accuracy_score(y_va, preds)
+        acc = accuracy_score(y_va.get(), preds)
         cv_scores.append(acc)
 
     # Store iteration timing and results
@@ -158,6 +161,8 @@ for itera in range(nb_groups + 1):
         'mean_cv_score': float(np.mean(cv_scores)),
         'std_cv_score': float(np.std(cv_scores))
     })
+    print(iteration_time)
+    print(cv_scores)
 
     continue
     def objective(trial):
