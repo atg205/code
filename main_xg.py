@@ -7,7 +7,7 @@ import cupy as cp
 import datetime
 import config
 import utils_data
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split, StratifiedKFold,cross_val_score
 
 import xgboost as xgb
 import optuna
@@ -119,7 +119,7 @@ for itera in range(nb_groups + 1):
     
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     cv_scores = []
-
+    """
     for fold, (train_idx, val_idx) in enumerate(skf.split(X_train.get(), y_train.get()), 1):
         print(f"Fold {fold}")
 
@@ -164,7 +164,7 @@ for itera in range(nb_groups + 1):
     print(iteration_time)
     print(cv_scores)
 
-    continue
+    """
     def objective(trial):
         # Suggest hyperparameters
         params = {
@@ -172,10 +172,11 @@ for itera in range(nb_groups + 1):
             'learning_rate': trial.suggest_float('learning_rate', 1e-3, 1.0, log=True),
             'subsample': trial.suggest_float('subsample', 0.5, 1.0),
             'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
+            'n_estimators':trial.suggest_int('n_estimators',200,800,step=100)
         }
 
         # Create an XGBoost classifier with the suggested hyperparameters
-        model = xgb.XGBClassifier(**params, n_estimators=200, objective='multi:softmax', random_state=42)
+        model = xgb.XGBClassifier(**params, objective='multi:softprob', random_state=42)
 
         # Perform 5-fold cross-validation and return the mean accuracy
         scores = cross_val_score(model, X_full, y_full, cv=5, scoring='accuracy')
