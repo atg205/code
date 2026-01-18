@@ -2,15 +2,14 @@ import numpy as np
 import pickle
 import json
 import time
-import cupy as cp
 
 import datetime
 import config
 import utils_data
 from sklearn.model_selection import train_test_split, StratifiedKFold,cross_val_score
+from tqdm import tqdm
 
-import xgboost as xgb
-import optuna
+from river import tree, metrics
 from sklearn.metrics import accuracy_score
 # config
 batch_size = config.batch_size
@@ -49,6 +48,10 @@ task_best_acc_list = []
 ### Iteration timing and results ###
 iteration_timing_results = []
 
+if config.device.type == 'cuda':
+    import cupy as cp
+
+
 total_classes = nb_cl_first + (nb_groups * nb_cl)  # 22 + (4 * 5) = 42
 for _ in range(total_classes):
     files_protoset.append([])
@@ -72,7 +75,7 @@ study_best_params = {'max_depth': 10,
                       'learning_rate': 0.3212170293514193,
                         'subsample': 0.9609976552579652,
                           'colsample_bytree': 0.6749501844903036,
-                            'n_estimators': 700}
+                            'n_estimators': 2}
 
 ### Save the mixing and order ###
 with open(f"{nb_cl}mixing.pickle", 'wb') as fp:
@@ -86,69 +89,81 @@ print(datetime.datetime.now())
 print(config.device)
 est = 1000
 ##### ------------- Main Algorithm START -------------#####
+model = tree.HoeffdingAdaptiveTreeClassifier(
+    grace_period=200,
+    delta=1e-5,
+    leaf_prediction='nba',
+    seed=42
+)
+
+metric_full = metrics.Accuracy()
+
+def to_river_dict(x):
+    return {f"f{i}": x[i] for i in range(len(x))}
+
+
 for itera in range(nb_groups + 1):
     iteration_start_time = time.time()
-    print(f'Batch of classes number {itera+1} arrives ...')
-    
+    print(f'Batch of classes number {itera + 1} arrives ...')
+
     if itera == 0:
         cur_nb_cl = nb_cl_first
         idx_iter = files_train[itera]
-        prev_idx_iter = idx_iter.copy()
 
     else:
         cur_nb_cl = nb_cl
         idx_iter = files_train[itera][:]
-        
-        total_cl_now = nb_cl_first + ((itera-1) * nb_cl)
+
+        total_cl_now = nb_cl_first + ((itera - 1) * nb_cl)
         nb_protos_cl = int(np.ceil(nb_total * 1.0 / total_cl_now))
 
-        for i in range(nb_cl_first + (itera-1)*nb_cl): 
+        for i in range(nb_cl_first + (itera - 1) * nb_cl):
             tmp_var = files_protoset[i]
-            selected_exemplars = tmp_var[0:min(len(tmp_var),nb_protos_cl)]
+            selected_exemplars = tmp_var[0:min(len(tmp_var), nb_protos_cl)]
             idx_iter += selected_exemplars
-        idx_iter = np.concatenate((prev_idx_iter, idx_iter))
-        prev_idx_iter = idx_iter.copy()
 
+    print(f'Task {itera + 1}: Training {cur_nb_cl} classes...')
 
-    print(f'Task {itera + 1}: Training {cur_nb_cl} classes...') 
+    # Load data (same as before)
+    X_full, y_full = utils_data.read_data(
+        x_path, y_path, mixing, idx_iter
+    )
 
-    X_full, y_full = utils_data.read_data(x_path, y_path, mixing, idx_iter)
-    X_val, y_val = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
+    X_val, y_val = utils_data.read_data(
+        x_path_valid, y_path_valid, mixing, files_valid[itera]
+    )
 
-    X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
-    X_train, X_test, y_train, y_test = cp.asarray(X_train), cp.asarray(X_test), cp.asarray(y_train), cp.asarray(y_test)
-    # 4. Create anhd train the XGBoost model
-    dtrain = xgb.DMatrix(X_full, label=y_full)
-    dtest = xgb.DMatrix(X_test, label=y_test)
-    print("Est------------------")
-    print(est)
-    
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_scores = []
-    for fold, (train_idx, val_idx) in enumerate(skf.split(X_train.get(), y_train.get()), 1):
-        print(f"Fold {fold}")
+    # Train/test split preserved
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_full, y_full,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_full
+    )
 
-        X_tr = X_train[train_idx]
-        y_tr = y_train[train_idx]
-        X_va = X_train[val_idx]
-        y_va = y_train[val_idx]
+    # === STREAMING TRAINING ===
+    for xi, yi in tqdm(zip(X_train, y_train),total=len(X_train)):
+        x_dict = to_river_dict(xi)
+        model.learn_one(x_dict, yi)
 
-        model = xgb.XGBClassifier(
-            **study_best_params,
-            device=config.device.type,              # GPU
-            objective="multi:softprob",
-        )
+    # === EVALUATION OVER ALL TASKS ===
+    if itera == 0:
+        X_test_full = X_test.copy()
+        y_test_full = y_test.copy()
+    else:
+        X_test_full = np.concatenate([X_test_full, X_test])
+        y_test_full = np.concatenate([y_test_full, y_test])
 
-        model.fit(
-            X_tr,
-            y_tr,
-            eval_set=[(X_va, y_va)],
-            verbose=False,
-        )
+    metric_full = metrics.Accuracy()
+    for xi, yi in zip(X_test_full, y_test_full):
+        x_dict = to_river_dict(xi)
+        y_pred = model.predict_one(x_dict)
+        if y_pred is not None:
+            metric_full.update(yi, y_pred)
 
-        preds = model.predict(X_va)
-        acc = accuracy_score(y_va.get(), preds)
-        cv_scores.append(acc)
+    print(f'Full dataset accuracy {metric_full.get():.4f}')
+
+    """
 
     # Store iteration timing and results
     iteration_time = time.time() - iteration_start_time
@@ -162,7 +177,6 @@ for itera in range(nb_groups + 1):
     print(iteration_time)
     print(cv_scores)
 
-    """
     def objective(trial):
         # Suggest hyperparameters
         params = {
@@ -189,7 +203,7 @@ for itera in range(nb_groups + 1):
     # Print the best hyperparameters and best score
     print(f"Best hyperparameters: {study.best_params}")
     print(f"Best score: {study.best_value:.4f}")
-
+    """
 # Write iteration timing and results to JSON file
 if iteration_timing_results:
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
