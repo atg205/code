@@ -123,7 +123,7 @@ for itera in range(nb_groups + 1):
     print("Est------------------")
     print(est)
     
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    skf = StratifiedKFold(n_splits=1, shuffle=True, random_state=42)
     cv_scores = []
     for fold, (train_idx, val_idx) in enumerate(skf.split(X_train.get(), y_train.get()), 1):
         print(f"Fold {fold}")
@@ -161,6 +161,7 @@ for itera in range(nb_groups + 1):
     })
     print(iteration_time)
     print(cv_scores)
+    study_best_params['n_estimators'] -= 100
 
     """
     def objective(trial):
@@ -189,11 +190,11 @@ for itera in range(nb_groups + 1):
     # Print the best hyperparameters and best score
     print(f"Best hyperparameters: {study.best_params}")
     print(f"Best score: {study.best_value:.4f}")
-
+"""
 # Write iteration timing and results to JSON file
 if iteration_timing_results:
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_filename = f"iteration_results_{timestamp}.json"
+    json_filename = f"xgb_iteration_results_{timestamp}.json"
     with open(json_filename, 'w') as f:
         json.dump(iteration_timing_results, f, indent=2)
     print(f"\nIteration results saved to {json_filename}")
