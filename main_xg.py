@@ -2,7 +2,6 @@ import numpy as np
 import pickle
 import json
 import time
-import cupy as cp
 
 import datetime
 import config
@@ -28,6 +27,10 @@ stop_floor_ep = config.stop_floor_ep
 factor = config.factor
 min_lr = config.min_lr
 nb_cluster = config.nb_cluster
+
+
+if config.device.type == 'cuda':
+    import cupy as cp
 
 # path
 data_path = config.data_path
@@ -116,15 +119,17 @@ for itera in range(nb_groups + 1):
     X_val, y_val = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
 
     X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
-    X_train, X_test, y_train, y_test = cp.asarray(X_train), cp.asarray(X_test), cp.asarray(y_train), cp.asarray(y_test)
+    if config.device.type == 'cuda':
+        X_train, X_test, y_train, y_test = cp.asarray(X_train), cp.asarray(X_test), cp.asarray(y_train), cp.asarray(y_test)
     # 4. Create anhd train the XGBoost model
     dtrain = xgb.DMatrix(X_full, label=y_full)
     dtest = xgb.DMatrix(X_test, label=y_test)
     print("Est------------------")
-    print(est)
-    
-    skf = StratifiedKFold(n_splits=1, shuffle=True, random_state=42)
+    print(study_best_params['n_estimators'])
     cv_scores = []
+
+    """
+    skf = StratifiedKFold(n_splits=1, shuffle=True, random_state=42)
     for fold, (train_idx, val_idx) in enumerate(skf.split(X_train.get(), y_train.get()), 1):
         print(f"Fold {fold}")
 
@@ -133,22 +138,23 @@ for itera in range(nb_groups + 1):
         X_va = X_train[val_idx]
         y_va = y_train[val_idx]
 
-        model = xgb.XGBClassifier(
-            **study_best_params,
-            device=config.device.type,              # GPU
-            objective="multi:softprob",
-        )
+    """
+    model = xgb.XGBClassifier(
+        **study_best_params,
+        device=config.device.type,              # GPU
+        objective="multi:softprob",
+    )
 
-        model.fit(
-            X_tr,
-            y_tr,
-            eval_set=[(X_va, y_va)],
-            verbose=False,
-        )
 
-        preds = model.predict(X_va)
-        acc = accuracy_score(y_va.get(), preds)
-        cv_scores.append(acc)
+    model.fit(
+        X_train,
+        y_train,
+        verbose=False,
+    )
+
+    preds = model.predict(X_test)
+    acc = accuracy_score(y_test.get(), preds)
+    cv_scores.append(acc)
 
     # Store iteration timing and results
     iteration_time = time.time() - iteration_start_time
