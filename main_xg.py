@@ -119,7 +119,6 @@ for itera in range(nb_groups + 1):
 
     if config.device.type == 'cuda':
         X_train, X_test, y_train, y_test = cp.asarray(X_train), cp.asarray(X_test), cp.asarray(y_train), cp.asarray(y_test)
-        X_class_test, y_class_test = cp.asarray(X_class_test), cp.asarray(y_class_test)
 
 
     # 4. Create anhd train the XGBoost model
@@ -161,6 +160,7 @@ for itera in range(nb_groups + 1):
     for test_itera in range(itera + 1):
         X_class_test, y_class_test = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[test_itera])
 
+        X_class_test, y_class_test = cp.asarray(X_class_test), cp.asarray(y_class_test)
         class_preds = model.predict(X_class_test)
         per_class_acc.append(accuracy_score(y_class_test.get(), class_preds))
     print(f"Per class accuracy {per_class_acc}")
