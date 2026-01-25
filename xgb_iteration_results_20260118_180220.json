@@ -1,0 +1,47 @@
+[
+  {
+    "iteration": 0,
+    "time_seconds": 200.35921120643616,
+    "cross_val_scores": [
+      0.8882947888699048
+    ],
+    "mean_cv_score": 0.8882947888699048,
+    "std_cv_score": 0.0
+  },
+  {
+    "iteration": 1,
+    "time_seconds": 236.6842064857483,
+    "cross_val_scores": [
+      0.8541524202810992
+    ],
+    "mean_cv_score": 0.8541524202810992,
+    "std_cv_score": 0.0
+  },
+  {
+    "iteration": 2,
+    "time_seconds": 264.36926341056824,
+    "cross_val_scores": [
+      0.7932050128645186
+    ],
+    "mean_cv_score": 0.7932050128645186,
+    "std_cv_score": 0.0
+  },
+  {
+    "iteration": 3,
+    "time_seconds": 272.6741044521332,
+    "cross_val_scores": [
+      0.7812174270236965
+    ],
+    "mean_cv_score": 0.7812174270236965,
+    "std_cv_score": 0.0
+  },
+  {
+    "iteration": 4,
+    "time_seconds": 253.7842903137207,
+    "cross_val_scores": [
+      0.7678437333188575
+    ],
+    "mean_cv_score": 0.7678437333188575,
+    "std_cv_score": 0.0
+  }
+]

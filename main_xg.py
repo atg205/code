@@ -96,7 +96,7 @@ for itera in range(nb_groups + 1):
     if itera == 0:
         cur_nb_cl = nb_cl_first
         idx_iter = files_train[itera]
-        prev_idx_iter = idx_iter.copy()
+        
 
     else:
         cur_nb_cl = nb_cl
@@ -110,20 +110,21 @@ for itera in range(nb_groups + 1):
             selected_exemplars = tmp_var[0:min(len(tmp_var),nb_protos_cl)]
             idx_iter += selected_exemplars
         idx_iter = np.concatenate((prev_idx_iter, idx_iter))
-        prev_idx_iter = idx_iter.copy()
 
+    cur_class_indx = idx_iter.copy()
+    prev_idx_iter = idx_iter.copy()
 
     print(f'Task {itera + 1}: Training {cur_nb_cl} classes...') 
 
     X_full, y_full = utils_data.read_data(x_path, y_path, mixing, idx_iter)
-    X_val, y_val = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
+    X_class_test, y_class_test = utils_data.read_data(x_path_valid, y_path_valid, mixing, files_valid[itera])
 
     X_train, X_test, y_train, y_test = train_test_split(X_full, y_full, test_size=0.2, random_state=42,stratify=y_full)
+
     if config.device.type == 'cuda':
         X_train, X_test, y_train, y_test = cp.asarray(X_train), cp.asarray(X_test), cp.asarray(y_train), cp.asarray(y_test)
+        X_class_test, y_class_test = cp.asarray(X_class_test), cp.asarray(y_class_test)
     # 4. Create anhd train the XGBoost model
-    dtrain = xgb.DMatrix(X_full, label=y_full)
-    dtest = xgb.DMatrix(X_test, label=y_test)
     print("Est------------------")
     print(study_best_params['n_estimators'])
     cv_scores = []
@@ -156,6 +157,10 @@ for itera in range(nb_groups + 1):
     acc = accuracy_score(y_test.get(), preds)
     cv_scores.append(acc)
 
+    class_preds = model.predict(X_class_test)
+    per_class_acc = accuracy_score(y_class_test.get(), class_preds)
+    print(f"Per class accuracy: {per_class_acc}")
+
     # Store iteration timing and results
     iteration_time = time.time() - iteration_start_time
     iteration_timing_results.append({
@@ -163,7 +168,8 @@ for itera in range(nb_groups + 1):
         'time_seconds': iteration_time,
         'cross_val_scores': cv_scores,
         'mean_cv_score': float(np.mean(cv_scores)),
-        'std_cv_score': float(np.std(cv_scores))
+        'std_cv_score': float(np.std(cv_scores)),
+        'per_class_acc': per_class_acc
     })
     print(iteration_time)
     print(cv_scores)
