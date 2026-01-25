@@ -122,9 +122,9 @@ def main():
 
         cv_scores = []
         cv_scores.append(acc)
-        print(f"Precision: {precision_score(y_test.get(), preds)} ")
-        print(f"Recall: {recall_score(y_test.get(), preds)} ")
-        print(f"F1: {f1_score(y_test.get(), preds)} ")
+        print(f"Precision: {precision_score(y_test.get(), preds, average='macro')} ")
+        print(f"Recall: {recall_score(y_test.get(), preds,average='macro')} ")
+        print(f"F1: {f1_score(y_test.get(), preds,average='macro')} ")
 
 
         ## Calculate per task accuracy
