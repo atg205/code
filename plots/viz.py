@@ -1,14 +1,23 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+
+# -----------------------------
+# Paths
+# -----------------------------
+base = Path(__file__).resolve().parent
+project_root = base.parent
+results_dir = project_root / 'results'
+out_dir = base
 
 # -----------------------------
 # Load results
 # -----------------------------
-with open("xgb_iteration_results_20260125_171701.json", "r") as f:
+with open(results_dir / "xgb_iteration_results_20260125_171701.json", "r") as f:
     xgb_results = json.load(f)
 
-with open("iteration_results_20260116_194542.json", "r") as f:
+with open(results_dir / "iteration_results_20260116_194542.json", "r") as f:
     tramel_results = json.load(f)
 
 # -----------------------------
@@ -52,7 +61,7 @@ plt.title("Overall accuracy across incremental tasks")
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig("comparison_mean_accuracy.pdf")
+plt.savefig(str(out_dir / "comparison_mean_accuracy.pdf"))
 # ============================================================
 # Figure 2 — Per-class / per-task accuracy evolution
 # (color = iteration, marker/line = method)
@@ -139,7 +148,7 @@ legend_iters = plt.legend(
 plt.gca().add_artist(legend_methods)
 
 plt.tight_layout()
-plt.savefig("comparison_per_class_accuracy.pdf", bbox_inches="tight")
+plt.savefig(str(out_dir / "comparison_per_class_accuracy.pdf"), bbox_inches="tight")
 plt.show()
 
 
@@ -158,7 +167,7 @@ plt.title("Training time per incremental iteration")
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig("comparison_training_time.pdf")
+plt.savefig(str(out_dir / "comparison_training_time.pdf"))
 
 # -----------------------------
 # Show all figures nicely

@@ -22,3 +22,19 @@ IoT23 : data/IoT23/store_by_capture.py -> capture_preprocess.py (saves to /scrat
 ```
 python main_all.py 
 ```
+
+## Refactored layout (automated)
+After reorganization the repository follows this layout:
+
+- `data/` : original dataset-related folders.
+- `data/resources/` : small data artefacts (feature encoders, label classes) moved here.
+- `results/` : JSON iteration / experiment summaries (`iteration_results_*.json`, `xgb_iteration_results_*.json`).
+- `models/` : trained model files and exported model JSONs (`model-iteration*.pt`, `xgboost_model.json`).
+- `plots/` : plotting scripts and generated figures. Plot scripts now read from `results/` and save output into `plots/`.
+
+Example: run the comparison plots from the `plots/` folder:
+
+```bash
+python plots/plot_results.py
+python plots/viz.py
+```

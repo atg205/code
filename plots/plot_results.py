@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 # Poster font sizes
 TITLE_FONTSIZE = 48
@@ -8,10 +9,15 @@ LABEL_FONTSIZE = 40
 TICK_FONTSIZE = 36
 LEGEND_FONTSIZE = 38
 
-with open('iteration_results_20260116_194542.json','r') as tramel_results_file:
+base = Path(__file__).resolve().parent
+project_root = base.parent
+results_dir = project_root / 'results'
+out_dir = base
+
+with open(results_dir / 'iteration_results_20260116_194542.json','r') as tramel_results_file:
     tramel_results = json.load(tramel_results_file)
 
-with open('xgb_iteration_results_20260118_180220.json','r') as xgb_results_file:
+with open(results_dir / 'xgb_iteration_results_20260118_180220.json','r') as xgb_results_file:
     xgb_results = json.load(xgb_results_file)
 
 xgb_success = [entry['mean_cv_score'] for entry in xgb_results]
@@ -49,6 +55,6 @@ fig.legend(handles, labels, fontsize=LEGEND_FONTSIZE, loc='upper center', bbox_t
 
 plt.tight_layout()
 plt.subplots_adjust(bottom=0.15)
-plt.savefig('performance_time_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig(str(out_dir / 'performance_time_comparison.png'), dpi=300, bbox_inches='tight')
 plt.show()
 

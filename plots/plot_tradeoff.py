@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 # Poster font sizes
 TITLE_FONTSIZE = 48
@@ -49,6 +50,9 @@ ax.grid(True, alpha=0.3, linewidth=1.5)
 ax.set_xlim(0.08, 0.38)
 ax.set_ylim(0.495, 0.540)
 
+base = Path(__file__).resolve().parent
+out_path = base / 'stability_plasticity_tradeoff.png'
+
 plt.tight_layout()
-plt.savefig('stability_plasticity_tradeoff.png', dpi=300, bbox_inches='tight')
+plt.savefig(str(out_path), dpi=300, bbox_inches='tight')
 plt.show()

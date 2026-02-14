@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 # Poster font sizes
 TITLE_FONTSIZE = 48
@@ -50,7 +51,10 @@ ax2.grid(True, alpha=0.3)
 handles, labels = ax1.get_legend_handles_labels()
 fig.legend(handles, labels, fontsize=LEGEND_FONTSIZE, loc='upper center', bbox_to_anchor=(0.5, -0.02), ncol=2, framealpha=0.95)
 
+base = Path(__file__).resolve().parent
+out_path = base / 'accuracy_forgetting_comparison.png'
+
 plt.tight_layout()
 plt.subplots_adjust(bottom=0.15)
-plt.savefig('accuracy_forgetting_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig(str(out_path), dpi=300, bbox_inches='tight')
 plt.show()
