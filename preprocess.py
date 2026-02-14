@@ -24,7 +24,7 @@ df = df.drop_duplicates().reset_index(drop=True)
 # --------------------
 # Remove benign traffic
 # --------------------
-df = df[df["label"] != "Benign"].reset_index(drop=True)
+#df = df[df["label"] != "Benign"].reset_index(drop=True)
 
 # --------------------
 # Remove rare classes
