@@ -38,3 +38,20 @@ Example: run the comparison plots from the `plots/` folder:
 python plots/plot_results.py
 python plots/viz.py
 ```
+
+## Dependencies & Setup
+
+A minimal set of Python packages is required to run the plotting and evaluation scripts. Create a virtual environment and install dependencies from `requirements.txt`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+If you only need to run the plot scripts quickly, the minimal packages are `numpy` and `matplotlib`.
+
+## Notes
+- Plot scripts read result summaries from the `results/` directory and save figures into the `plots/` directory.
+- Trained models remain in `models/` and large datasets remain inside `data/`.
